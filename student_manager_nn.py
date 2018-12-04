@@ -1,33 +1,43 @@
 __author__ = 'lovline'
-'''
-	this is the system main function.
-'''
 """
-    this is a employee-manager system
+    this is a student manager system
     its function is used by Python by lovline
+    there are two user permission and some sql function
     begin day : 2018-11-21
-    update day: 2018-12-04
+    update day:2018-11-30
 """
+
+#import used modules#
 import os
 import re
 from datetime import datetime
 import time
 import MySQLdb
 
-curr_admin = 'admin'  #default admin#
-stu_index = 0   #studend database index#
-stu_info = []   #tempory record one line student infomation#
+#some global variables#
+curr_admin = 'admin'  #default user:admin#
+stu_index = 0   #studend database valid count#
+#stu_info = []   #tempory record one line student infomation#
 stu_sys_info = []   #total student infomations in system#
 login_users = {
     'admin': '******',
     'user': '******'
-}
+}#login users#
 
+#mysql connect sql comments#
 conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='root', passwd='Nqwer123', db='student_info', charset='utf8')
 cursor = conn.cursor()
 
 
 def record_operation_or_security_log(who, content, eResult, iType):
+    """
+    record operation adnd security log to database
+    :param who:
+    :param content:
+    :param eResult:
+    :param iType:
+    :return:
+    """
     global conn, cursor
     curr_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sql = "insert into optseclog(who, contents, whenT, eResult, iType) values('%s', '%s', '%s', '%s', '%s')" \
@@ -37,6 +47,10 @@ def record_operation_or_security_log(who, content, eResult, iType):
 
 
 def invalid_current_db_data():
+    """
+    set istatus of users to 0 in database
+    :return:
+    """
     sql = "select * from student_info"
     update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute(sql)
@@ -51,6 +65,10 @@ def invalid_current_db_data():
 
 
 def initial_system():
+    """
+    initial student manager system
+    :return:
+    """
     print '*** system initialing ***'
     #time.sleep(1.5)
     print '*** system initial succeed ***'
@@ -78,6 +96,11 @@ def initial_system():
 
 
 def is_valid_number(num):
+    """
+    check the num between 1 and 6
+    :param num:
+    :return:
+    """
     if len(num) > 1:
         return False
     elif re.search(r'[1|2|3|4|5|6]', num):
@@ -86,6 +109,11 @@ def is_valid_number(num):
 
 
 def have_record_data(username):
+    """
+    check if username exists in database
+    :param username:
+    :return:curr_user ID or False
+    """
     global conn
     global cursor
     sql = "select * from student_info where user_name='%s'" % username
@@ -102,6 +130,10 @@ def have_record_data(username):
 
 
 def query_current_data_from_db():
+    """
+    query and record current valid datas from DB
+    :return:
+    """
     global conn, cursor, stu_index, stu_sys_info
     stu_index = 0
     stu_sys_info = []
@@ -117,23 +149,44 @@ def query_current_data_from_db():
     return stu_index, stu_sys_info
 
 
-def nn_add_student():
+def have_lovers_exits_then_merge(latest_user, lover_name, update_time):
+    """
+    merge address and salary of two - latest_user's lovers and itself
+    :param latest_user:
+    :param lover_name
+    :param update_time
+    :return:
+    """
     global stu_index, stu_sys_info, conn, cursor
-    print 'please input fellowing message and sperate as [space]'
+    merge_address, merge_salary = '', 0
+    cur_uid = have_record_data(latest_user)
+    lover_uid = have_record_data(lover_name)
+    if lover_uid is not False:
+        sql = "select * from student_info where id=%d or id=%d" % (lover_uid, cur_uid)
+        cursor.execute(sql)
+        conn.commit()
+        for row in cursor.fetchall():
+            merge_address += (list(row)[6] + ' ')
+            merge_salary += int(list(row)[9])
+            change_t = int(list(row)[13]) + 1
+            sql_new = "update student_info set address='%s', salary=%d, update_time='%s', change_times=%d where id=%d" \
+                      % (merge_address, merge_salary, update_time, change_t, list(row)[0])
+            cursor.execute(sql_new)
+            conn.commit()
+        ret_msg = 'update user=[%s] and user=[%s] succeed.' % (lover_name, latest_user)
+        print ret_msg
+        record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
+
+
+def nn_add_student():
+    """
+    add a new student to DB
+    :return:
+    """
+    global stu_index, stu_sys_info, conn, cursor
+    print 'please input username'
     while True:
-        student = raw_input('^username password[six numbers] sex[M|F] age[7-100] single[Y|N] address graduate_school'
-                            ' company salay and whose_lover$ or q\Q to return back \n')
-        if 'q' == student or 'Q' == student:
-            break
-        len_student = len(re.split('\s+', student))
-        if 10 != len_student:
-            ret_msg = 'input have too few or much parameters -- parameters len is need 10 yours are %d.\n' % len_student
-            print ret_msg
-            record_operation_or_security_log('admin', ret_msg, 'failure', 'opt_log')
-            return 1  # parameters len is wrong#
-        user_name, password, sex, age, single, address, graduate_school, company, salary, whose_lover \
-            = re.split('\s+', student)
-        # print user_name, password, sex, single, address, graduate_school, company, salary, whose_lover#
+        user_name = raw_input('username:')
         if 0 == re.match(r'^[_A-Za-z1-9]+$', user_name):
             ret_msg = 'user name=[%s] is invalid.\n' % user_name
             print ret_msg
@@ -144,6 +197,20 @@ def nn_add_student():
             print ret_msg
             record_operation_or_security_log('admin', ret_msg, 'failure', 'opt_log')
             continue
+        print 'username is valid, please input following message and sperate as [space] '
+        student = raw_input('^password[six numbers] sex[M|F] age[7-100] single[Y|N] address graduate_school'
+                            ' company salay and whose_lover$ or q\Q to return back \n')
+        if 'q' == student or 'Q' == student:
+            break
+        len_student = len(re.split('\s+', student))
+        if 9 != len_student:
+            ret_msg = 'input have too few or much parameters -- parameters len is need 10 yours are %d.\n' % len_student
+            print ret_msg
+            record_operation_or_security_log('admin', ret_msg, 'failure', 'opt_log')
+            return 1  # parameters len is wrong#
+        password, sex, age, single, address, graduate_school, company, salary, whose_lover \
+            = re.split('\s+', student)
+        # print user_name, password, sex, single, address, graduate_school, company, salary, whose_lover#
         if 0 == re.match('\d{6}', password):
             ret_msg = 'your input password is invalid.\n'
             print ret_msg
@@ -188,15 +255,24 @@ def nn_add_student():
                whose_lover, create_time, update_time, 0, 1)
         cursor.execute(sql)
         conn.commit()
+        #each commit needs to get latest DB data#
         stu_index, stu_sys_info = query_current_data_from_db()
         ret_msg = 'add student info succeed.\n'
         print ret_msg
         record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
-        #if lovers merge address and salary#
-        #TODO#
+        #if lovers exits in DB the merge them address and salary#
+        if whose_lover is not 'NA':
+            have_lovers_exits_then_merge(user_name, whose_lover, create_time)
+        return
 
 
 def display_current_db_data(index, sys_info):
+    """
+    according to param to display current DB data or query result data
+    :param index:
+    :param sys_info:
+    :return:
+    """
     global stu_index, stu_sys_info
     if stu_index != index or stu_sys_info != sys_info:
         tmp_index, tmp_sys_info = index, sys_info
@@ -214,6 +290,10 @@ def display_current_db_data(index, sys_info):
 
 
 def nn_delete_student():
+    """
+    delete one student from DB
+    :return:
+    """
     global stu_index, stu_sys_info
     display_current_db_data(stu_index, stu_sys_info)
     del_user = raw_input('please choose one user you want to delete by user_name: ')
@@ -222,10 +302,13 @@ def nn_delete_student():
         sql = "update student_info set data_status=0 where id=%s" % del_id
         cursor.execute(sql)
         conn.commit()
-        print 'delete user [%s] succeed.' % del_user
-        #time.sleep(1)
+        ret_msg = 'delete user [%s] succeed.' % del_user
+        print ret_msg
     else:
-        print 'delete user fail, user_name [%s] is not in system.' % del_user
+        ret_msg = 'delete user fail, user_name [%s] is not in system.' % del_user
+        print ret_msg
+    # time.sleep(1)
+    record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
 
 
 def nn_update_student():
@@ -233,6 +316,14 @@ def nn_update_student():
 
 
 def according_to_query_type_display(q_type, little=0, larger=0):
+    """
+    according to type of age, salary, age_border, salary_border to
+    display query result DB data
+    :param q_type:
+    :param little:
+    :param larger:
+    :return:
+    """
     global stu_sys_info
     query_count = 0
     tmp_stu_info = []
@@ -252,6 +343,11 @@ def according_to_query_type_display(q_type, little=0, larger=0):
 
 
 def according_to_query_key_word_display(key_words):
+    """
+    according to key word by user to display DB data
+    :param key_words:
+    :return:
+    """
     global stu_sys_info
     query_count = 0
     tmp_stu_info = []
@@ -267,6 +363,11 @@ def according_to_query_key_word_display(key_words):
 
 
 def according_to_query_directory_display():
+    """
+    display current DB data including:
+        user name, address, graduate_school, company.
+    :return:
+    """
     global stu_sys_info
     cunt_name, cunt_address, cunt_school, cunt_company = 0, 0, 0, 0
     name, address, school, company = [], [], [], []
@@ -290,6 +391,10 @@ def according_to_query_directory_display():
 
 
 def nn_display_student():
+    """
+    according different type to display data
+    :return:
+    """
     global stu_index, stu_sys_info
     if 0 == stu_index:
         print 'there are no student info in system please choose 1 to add.\n'
@@ -347,6 +452,10 @@ def nn_display_student():
 
 
 def start_manager_system():
+    """
+    start student manager system
+    :return:
+    """
     global curr_admin
     while True:
         if 'admin' == curr_admin:
@@ -382,6 +491,10 @@ def start_manager_system():
 
 
 def clear_system():
+    """
+    exit student manager system
+    :return:
+    """
     global conn, cursor, curr_admin
     exit_title = '*** welcome to you next time ***'
     print exit_title
@@ -407,6 +520,12 @@ def clear_system():
 
 
 def is_allowed_user_login(login_name, login_pwd):
+    """
+    check the allowed user for logging in
+    :param login_name:
+    :param login_pwd:
+    :return: True or False
+    """
     global login_users, curr_admin
     for key, value in login_users.items():
         if login_name == key and login_pwd == value:
@@ -420,6 +539,10 @@ def is_allowed_user_login(login_name, login_pwd):
 
 
 def student_manger_system():
+    """
+    main function of the student manager system
+    :return:
+    """
     while True:
         #increase system permissions admin&user#
         login_name = raw_input('username:')
@@ -435,8 +558,7 @@ def student_manger_system():
             record_operation_or_security_log(login_name, ret_msg, 'failure', 'sec_log')
 
 
-#main begin#
+#gonna begin#
 student_manger_system()
-
 
 
