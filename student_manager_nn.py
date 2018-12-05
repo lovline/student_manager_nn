@@ -302,17 +302,44 @@ def nn_delete_student():
         sql = "update student_info set data_status=0 where id=%s" % del_id
         cursor.execute(sql)
         conn.commit()
-        ret_msg = 'delete user [%s] succeed.' % del_user
+        ret_msg = 'delete user=[%s] succeed.' % del_user
+        result = 'succeed'
         print ret_msg
     else:
-        ret_msg = 'delete user fail, user_name [%s] is not in system.' % del_user
+        ret_msg = 'delete user fail, user_name=[%s] is not in system.' % del_user
+        result = 'failure'
         print ret_msg
     # time.sleep(1)
-    record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
+    record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
 def nn_update_student():
-    pass
+    global stu_index, stu_sys_info
+    display_current_db_data(stu_index, stu_sys_info)
+    update_user = raw_input('please choose one user you want to delete by user_name: ')
+    update_id = have_record_data(del_user)
+    if update_id:
+        varialbes = raw_input('which attributes you want to update from [password or single or address or \
+                              graduate_school or company or salary or whose_lover]?')
+        up_pwd, up_single, up_address, up_school, up_company, up_salary, up_lover = re.split('\s+', varialbes)
+        #TODO#
+        
+        #if address or salary change then update lover's#
+        if up_address is not '' or up_salary is not '':
+            #up_lover or original lover#
+            have_lovers_exits_then_merge(update_user, up_lover, create_time)
+        sql = "update student_info set data_status=0 where id=%s" % del_id
+        cursor.execute(sql)
+        conn.commit()
+        ret_msg = 'update user=[%s] succeed.' % update_user
+        result = 'succeed'
+        print ret_msg
+    else:
+        ret_msg = 'update user fail, user_name=[%s] is not in system.' % del_user
+        result = 'failure'
+        print ret_msg
+    # time.sleep(1)
+    record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
 def according_to_query_type_display(q_type, little=0, larger=0):
@@ -340,6 +367,7 @@ def according_to_query_type_display(q_type, little=0, larger=0):
                 tmp_stu_info.append(info)
                 query_count += 1
     display_current_db_data(query_count, tmp_stu_info)
+    record_operation_or_security_log('admin', 'according_to_query_type_display', 'succeed', 'opt_log')
 
 
 def according_to_query_key_word_display(key_words):
@@ -360,6 +388,7 @@ def according_to_query_key_word_display(key_words):
             if 0 != query_count:
                 break
     display_current_db_data(query_count, tmp_stu_info)
+    record_operation_or_security_log('admin', 'according_to_query_key_word_display', 'succeed', 'opt_log')
 
 
 def according_to_query_directory_display():
@@ -387,6 +416,7 @@ def according_to_query_directory_display():
     lst_key = [cunt_name, cunt_address, cunt_school, cunt_company]
     lst_value = [name, address, school, company]
     result_lst = [lst_key, lst_value]
+    record_operation_or_security_log('admin', 'according_to_query_directory_display', 'succeed', 'opt_log')
     return result_lst
 
 
@@ -437,6 +467,7 @@ def nn_display_student():
                     according_to_query_type_display(4, little_age, large_age)
                 else:
                     print 'please input valid border ages eg:24-68 or salary 3000-5000'
+                    record_operation_or_security_log('admin', 'age or salary border is fault', 'failure', 'opt_log')
             elif 5 == q_type:
                 # according to key-words conditions to query#
                 key_words = raw_input('which key-word will you like to input, please write it down : ')
