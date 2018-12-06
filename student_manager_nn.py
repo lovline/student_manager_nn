@@ -1,4 +1,3 @@
-__author__ = 'lovline'
 """
     this is a student manager system
     its function is used by Python by lovline
@@ -7,24 +6,24 @@ __author__ = 'lovline'
     update day:2018-11-30
 """
 
-#import used modules#
+# import used modules#
 import os
 import re
 from datetime import datetime
 import time
 import MySQLdb
 
-#some global variables#
-curr_admin = 'admin'  #default user:admin#
-stu_index = 0   #studend database valid count#
-#stu_info = []   #tempory record one line student infomation#
-stu_sys_info = []   #total student infomations in system#
+# some global variables#
+curr_admin = 'admin'  # default user:admin#
+stu_index = 0  # studend database valid count#
+# stu_info = []   #tempory record one line student infomation#
+stu_sys_info = []  # total student infomations in system#
 login_users = {
-    'admin': '******',
-    'user': '******'
-}#login users#
+    'admin': '***',
+    'user': '***'
+}  # login users#
 
-#mysql connect sql comments#
+# mysql connect sql comments#
 conn = MySQLdb.connect(host='127.0.0.1', port=3306, user='root', passwd='Nqwer123', db='student_info', charset='utf8')
 cursor = conn.cursor()
 
@@ -70,9 +69,9 @@ def initial_system():
     :return:
     """
     print '*** system initialing ***'
-    #time.sleep(1.5)
+    # time.sleep(1.5)
     print '*** system initial succeed ***'
-    #time.sleep(0.8)
+    # time.sleep(0.8)
     global conn, cursor, stu_index, stu_sys_info, curr_admin
     select_th, ret_msg = '', ''
     if 'admin' == curr_admin:
@@ -86,9 +85,9 @@ def initial_system():
         print '*** congratulations! a new database has created succeed! ***'
         ret_msg = 'user [%s] create a new database.' % curr_admin
     else:
-        #use original database#
+        # use original database#
         print '*** original database is loading ***'
-        #time.sleep(1)
+        # time.sleep(1)
         print '*** congratulations! original database has loaded succeed! ***'
         ret_msg = 'user [%s] load the original database.' % curr_admin
     record_operation_or_security_log(curr_admin, ret_msg, 'succeed', 'opt_log')
@@ -123,8 +122,8 @@ def have_record_data(username):
     if result is not None:
         if 0 == list(result)[14]:
             return False
-        #print type(cursor.fetchone()) #the cursor is step by step
-        return list(result)[0]  #return primary key ID#
+        # print type(cursor.fetchone()) #the cursor is step by step
+        return list(result)[0]  # return primary key ID#
     else:
         return False
 
@@ -255,12 +254,12 @@ def nn_add_student():
                whose_lover, create_time, update_time, 0, 1)
         cursor.execute(sql)
         conn.commit()
-        #each commit needs to get latest DB data#
+        # each commit needs to get latest DB data#
         stu_index, stu_sys_info = query_current_data_from_db()
         ret_msg = 'add student info succeed.\n'
         print ret_msg
         record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
-        #if lovers exits in DB the merge them address and salary#
+        # if lovers exits in DB the merge them address and salary#
         if whose_lover is not 'NA':
             have_lovers_exits_then_merge(user_name, whose_lover, create_time)
         return
@@ -281,9 +280,9 @@ def display_current_db_data(index, sys_info):
     print 'there are %d student-info in system, and they are : ' % tmp_index
     for index, info in enumerate(tmp_sys_info):
         if 0 == info[14]:
-            #iStatus is False#
+            # iStatus is False#
             continue
-        info = [str(ele) for ele in info]  #convert non-str to str#
+        info = [str(ele) for ele in info]  # convert non-str to str#
         info_no_pwd = info[1:2] + info[3:11]
         dsp_info = '  '.join(info_no_pwd)
         print '  No.%d --- %s' % (index + 1, dsp_info)
@@ -299,7 +298,7 @@ def nn_delete_student():
     del_user = raw_input('please choose one user you want to delete by user_name: ')
     del_id = have_record_data(del_user)
     if del_id:
-        #TO DO  need:times changeTimes++#
+        # TO DO  need:times changeTimes++#
         sql = "update student_info set data_status=0 where id=%s" % del_id
         cursor.execute(sql)
         conn.commit()
@@ -314,65 +313,59 @@ def nn_delete_student():
     record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
-def update_student_personl_info(up_id, target_col, up_data):
+def update_student_personal_info(up_id, target_column, up_data):
+    """
+    user up_data to update personal information by his or her column
+    :param up_id:
+    :param target_column:
+    :param up_data:
+    :return:
+    """
     global stu_index, stu_sys_info, conn, cursor
     up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if 'salary' == target_col:
-        target_col = int(target_col)
-    if 'password' = target_col:
+    if 'salary' == target_column:
+        up_data = int(up_data)
+    if 'password' == target_column:
         pass
     sql = ""
-    #TO DO#
-    
+    # TO DO#
+
 
 def nn_update_student():
     global stu_index, stu_sys_info
     display_current_db_data(stu_index, stu_sys_info)
     update_user = raw_input('please choose one user you want to delete by user_name: ')
-    update_id = have_record_data(del_user)
+    update_id = have_record_data(update_user)
     if update_id:
-        varialbes = raw_input('which attributes you want to update from [password or single or address or \
-                              graduate_school or company or salary or whose_lover]? input like this [address:xian]')
-        variables_info = re.split('\s+', varialbes)
-        #up_pwd, up_single, up_address, up_school, up_company, up_salary, up_lover = re.split('\s+', varialbes)
-        #can you hua xia#
-        result_check = re.search(update_id, 'password', variables_info)
-        if result_check is not '':
-            update_student_personl_info(update_id, 'password', result_check[0][1::])
-        result_check = re.search('single', variables_info)
-        if result_check is not '':
-           update_student_personl_info(update_id, 'single, result_check[0][1::])
-        result_check = re.search('address', variables_info)
-        if result_check is not '':
-           update_student_personl_info(update_id, 'address', result_check[0][1::])
-        result_check = re.search('graduate_school', variables_info)
-        if result_check is not '':
-           update_student_personl_info(update_id, 'graduate_school', result_check[0][1::])
-        result_check = re.search('company', variables_info)
-        if result_check is not '':
-           update_student_personl_info(update_id, 'company', result_check[0][1::])
-        result_check = re.search('salary', variables_info)
-        if result_check is not '':
-           update_student_personl_info(update_id, 'salary', result_check[0][1::])
-         result_check = re.search('whose_lover', variables_info)
-        if result_check is not '':
-           update_student_personl_info(update_id, 'whose_lover', result_check[0][1::])                                       
-        #if address or salary change then update lover's#
+        variables = raw_input('which attributes you want to update from [password or single or address or '
+                              'graduate_school or company or salary or whose_lover]? input like this [address:xian]')
+        variables_info = variables.split(' ')
+        #variables_info looks like ['password:xxx', 'address:xian']#
+        up_dic = {}
+        for up_data in variables_info:
+            #sep_data looks like this ['password', 'xxx']#
+            sep_data = re.split(':', up_data)
+            up_dic[sep_data[0]] = sep_data[1]
+        #up_dic {'salary': '10000', 'password': 'xxx', 'address': 'xian'}
+        for target_column, up_data in up_dic.items():
+            update_student_personl_info(update_id, target_column, up_data)
+
+        #need TODO#
+        # if address or salary change then update lover's#
         if up_address is not '' or up_salary is not '':
-            #up_lover or original lover#
+        # up_lover or original lover#
             have_lovers_exits_then_merge(update_user, up_lover, create_time)
-        sql = "update student_info set data_status=0 where id=%s" % del_id
+        sql = "update student_info set data_status=0 where id=%s" % update_id
         cursor.execute(sql)
         conn.commit()
         ret_msg = 'update user=[%s] succeed.' % update_user
         result = 'succeed'
         print ret_msg
-    else:
-        ret_msg = 'update user fail, user_name=[%s] is not in system.' % del_user
+        ret_msg = 'update user fail, user_name=[%s] is not in system.' % update_user
         result = 'failure'
         print ret_msg
-    # time.sleep(1)
-    record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
+        # time.sleep(1)
+        record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
 def according_to_query_type_display(q_type, little=0, larger=0):
@@ -462,14 +455,14 @@ def nn_display_student():
     if 0 == stu_index:
         print 'there are no student info in system please choose 1 to add.\n'
         return
-    #query type to judge which method query#
+    # query type to judge which method query#
     request_msg = 'we offer three types to query messages : \n' \
-                     '  [1] display all informations\n' \
-                     '  [2] according to [age] display informations\n' \
-                     '  [3] according to [salary] display informations\n' \
-                     '  [4] display the infor between ages eg:24-68 or salary 5000-7000 \n' \
-                     '  [5] acording to key-word display informationsn\n' \
-                     '  [6] display how many different types in system'
+                  '  [1] display all informations\n' \
+                  '  [2] according to [age] display informations\n' \
+                  '  [3] according to [salary] display informations\n' \
+                  '  [4] display the infor between ages eg:24-68 or salary 5000-7000 \n' \
+                  '  [5] acording to key-word display informationsn\n' \
+                  '  [6] display how many different types in system'
     print request_msg
     while True:
         q_type = raw_input('please input query condition [1-6] or q/Q to quit : ')
@@ -479,10 +472,10 @@ def nn_display_student():
         if is_valid_number(q_type):
             q_type = int(q_type)
             if 1 == q_type:
-                #according to no conditions to query#
+                # according to no conditions to query#
                 display_current_db_data(stu_index, stu_sys_info)
             elif 2 == q_type:
-                #according to age conditions to query#
+                # according to age conditions to query#
                 print 'information according to age literally...'
                 according_to_query_type_display(q_type=4)
             elif 3 == q_type:
@@ -490,7 +483,7 @@ def nn_display_student():
                 print 'information according to salary literally...'
                 according_to_query_type_display(q_type=9)
             elif 4 == q_type:
-                #accroding to age border to query#
+                # accroding to age border to query#
                 age_border = raw_input('please given border between ages eg:24-68 or salary 3000-5000 : ')
                 if re.search('-\w+', age_border):
                     little_age, large_age = age_border.split('-')
@@ -506,7 +499,7 @@ def nn_display_student():
                 key_words = raw_input('which key-word will you like to input, please write it down : ')
                 according_to_query_key_word_display(key_words)
             elif 6 == q_type:
-                #display how many different types in system#
+                # display how many different types in system#
                 stuff = ['name', 'address', 'school', 'company']
                 result_lst = according_to_query_directory_display()
                 for idx in xrange(len(result_lst[0])):
@@ -549,8 +542,8 @@ def start_manager_system():
                 else:
                     print 'to be or not to be'
         else:
-            #login in personal info system#
-            #TODO#
+            # login in personal info system#
+            # TODO#
             return
 
 
@@ -566,15 +559,15 @@ def clear_system():
     if 'admin' == curr_admin:
         select_th = raw_input('you want to save your records or not [Y/N] : ')
     if select_th is not 'n' or select_th is not 'N':
-        #create a new management system#
+        # create a new management system#
         print '*** records are being saving ***'
-        #time.sleep(2)
+        # time.sleep(2)
         print '*** records have been saved successfully ***'
         print '*** good bye ***'
         ret_msg = 'user=[%s] exit student system.' % curr_admin
     elif 'admin' == curr_admin:
         print '*** your records are deleting ***'
-        #time.sleep(1)
+        # time.sleep(1)
         invalid_current_db_data()
         print '*** your records have been deleted ***'
         print '*** good bye ***'
@@ -608,7 +601,7 @@ def student_manger_system():
     :return:
     """
     while True:
-        #increase system permissions admin&user#
+        # increase system permissions admin&user#
         login_name = raw_input('username:')
         login_pwd = raw_input('password:')
         if is_allowed_user_login(login_name, login_pwd):
@@ -622,7 +615,8 @@ def student_manger_system():
             record_operation_or_security_log(login_name, ret_msg, 'failure', 'sec_log')
 
 
-#gonna begin#
+# gonna begin#
 student_manger_system()
+
 
 
