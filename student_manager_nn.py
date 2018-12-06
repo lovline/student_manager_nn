@@ -299,6 +299,7 @@ def nn_delete_student():
     del_user = raw_input('please choose one user you want to delete by user_name: ')
     del_id = have_record_data(del_user)
     if del_id:
+        #TO DO  need:times changeTimes++#
         sql = "update student_info set data_status=0 where id=%s" % del_id
         cursor.execute(sql)
         conn.commit()
@@ -313,6 +314,17 @@ def nn_delete_student():
     record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
+def update_student_personl_info(up_id, target_col, up_data):
+    global stu_index, stu_sys_info, conn, cursor
+    up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if 'salary' == target_col:
+        target_col = int(target_col)
+    if 'password' = target_col:
+        pass
+    sql = ""
+    #TO DO#
+    
+
 def nn_update_student():
     global stu_index, stu_sys_info
     display_current_db_data(stu_index, stu_sys_info)
@@ -320,10 +332,31 @@ def nn_update_student():
     update_id = have_record_data(del_user)
     if update_id:
         varialbes = raw_input('which attributes you want to update from [password or single or address or \
-                              graduate_school or company or salary or whose_lover]?')
-        up_pwd, up_single, up_address, up_school, up_company, up_salary, up_lover = re.split('\s+', varialbes)
-        #TODO#
-        
+                              graduate_school or company or salary or whose_lover]? input like this [address:xian]')
+        variables_info = re.split('\s+', varialbes)
+        #up_pwd, up_single, up_address, up_school, up_company, up_salary, up_lover = re.split('\s+', varialbes)
+        #can you hua xia#
+        result_check = re.search(update_id, 'password', variables_info)
+        if result_check is not '':
+            update_student_personl_info(update_id, 'password', result_check[0][1::])
+        result_check = re.search('single', variables_info)
+        if result_check is not '':
+           update_student_personl_info(update_id, 'single, result_check[0][1::])
+        result_check = re.search('address', variables_info)
+        if result_check is not '':
+           update_student_personl_info(update_id, 'address', result_check[0][1::])
+        result_check = re.search('graduate_school', variables_info)
+        if result_check is not '':
+           update_student_personl_info(update_id, 'graduate_school', result_check[0][1::])
+        result_check = re.search('company', variables_info)
+        if result_check is not '':
+           update_student_personl_info(update_id, 'company', result_check[0][1::])
+        result_check = re.search('salary', variables_info)
+        if result_check is not '':
+           update_student_personl_info(update_id, 'salary', result_check[0][1::])
+         result_check = re.search('whose_lover', variables_info)
+        if result_check is not '':
+           update_student_personl_info(update_id, 'whose_lover', result_check[0][1::])                                       
         #if address or salary change then update lover's#
         if up_address is not '' or up_salary is not '':
             #up_lover or original lover#
