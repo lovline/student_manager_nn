@@ -313,6 +313,16 @@ def nn_delete_student():
     record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
+def get_user_original_password(user_id):
+    global conn, cursor
+    sql = "select * from setudent_info where id=%d" % user_id
+    cursor.execute(sql)
+    conn.commit()
+    row = cursor.fetchone()
+    #return user_name and password#
+    return list(row)[1], list(row)[2]
+
+    
 def update_student_personal_info(up_id, target_column, up_data):
     """
     user up_data to update personal information by his or her column
@@ -322,11 +332,17 @@ def update_student_personal_info(up_id, target_column, up_data):
     :return:
     """
     global stu_index, stu_sys_info, conn, cursor
+    #must match old password then update datas#
+    confirm_pwd = raw_input('please input user password to check:')
+    up_name, old_password = get_user_original_password(up_id)
+    if confirm_pwd != :
+        ret_msg = 'old password checked wrong! update user=[%s] data failure!' % up_name
+        print ret_msg
+        record_operation_or_security_log('admin', ret_msg, 'failure', 'opt_log')
     up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if 'salary' == target_column:
         up_data = int(up_data)
-    if 'password' == target_column:
-        pass
+
     sql = ""
     # TO DO#
 
