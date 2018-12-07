@@ -16,7 +16,6 @@ import MySQLdb
 # some global variables#
 curr_admin = 'admin'  # default user:admin#
 stu_index = 0  # studend database valid count#
-# stu_info = []   #tempory record one line student infomation#
 stu_sys_info = []  # total student infomations in system#
 login_users = {
     'admin': '***',
@@ -127,7 +126,17 @@ def have_record_data(username):
     else:
         return False
 
-
+    
+def get_user_original_old_info(user_id):
+    global conn, cursor
+    sql = "select * from setudent_info where id=%d" % user_id
+    cursor.execute(sql)
+    conn.commit()
+    row = cursor.fetchone()
+    #return user_name and password#
+    return list(row)[1], list(row)[2], int(list(row)[13])+1
+    
+    
 def query_current_data_from_db():
     """
     query and record current valid datas from DB
@@ -312,16 +321,6 @@ def nn_delete_student():
     # time.sleep(1)
     record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
-
-def get_user_original_old_info(user_id):
-    global conn, cursor
-    sql = "select * from setudent_info where id=%d" % user_id
-    cursor.execute(sql)
-    conn.commit()
-    row = cursor.fetchone()
-    #return user_name and password#
-    return list(row)[1], list(row)[2], int(list(row)[13])+1
-
     
 def update_student_personal_info(up_id, target_column, up_data):
     """
@@ -338,7 +337,7 @@ def update_student_personal_info(up_id, target_column, up_data):
     if confirm_pwd != old_password:
         ret_msg = 'old password checked wrong! update user=[%s] data failure!' % up_name
         print ret_msg
-        record_operation_or_security_log('admin', ret_msg, 'failure', 'opt_log')
+        record_operation_or_security_log('admin', ret_msg, 'failure', 'sec_log')
         return
     up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if 'salary' == target_column:
@@ -519,8 +518,31 @@ def nn_display_student():
 
 
 def login_personal_info_features():
+    global conn, cursor 
+    per_info = raw_input('please personal user_name and password : ')
+    u_name, u_pwd = per_info.split('\s+')
+    u_id = have_record_data(u_name)
+    if False == u_id:
+        ret_msg = 'the user=[%s] is not exits, please add first.' % u_name
+        print ret_msg
+        record_operation_or_security_log(u_name, ret_msg, 'failure', 'sec_log')
+        return
+    old_pwd = get_user_original_old_info(u_id)[1]
+    if old_pwd != u_pwd:
+        ret_msg = 'old password checked wrong! login user=[%s] failure!' % u_name
+        print ret_msg
+        record_operation_or_security_log(u_name, ret_msg, 'failure', 'sec_log')
+        return
+    ret_msg = 'correct password checked' % u_name
+    print ret_msg
+    record_operation_or_security_log(u_name, ret_msg, 'succeed', 'sec_log')
+    ret_msg = 'Hello [%s], welcome to your personal manager system!' % u_name
+    sql = "select * from student_info where id=%d" % u_id
+    cursor.execute(sql)
+    conn.commit()
+    personal_info = list(cursor.fetchone())
+    print personal_info[1:2] + personal_info[2:14]
     #TODO#
-    pass
                                                 
                         
 def start_manager_system():
@@ -567,7 +589,7 @@ def clear_system():
     exit student manager system
     :return:
     """
-    global conn, cursor, curr_admin
+    global curr_admin
     exit_title = '*** welcome to you next time ***'
     print exit_title
     select_th, ret_msg = 'y', ''
