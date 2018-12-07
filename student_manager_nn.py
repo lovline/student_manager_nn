@@ -313,14 +313,14 @@ def nn_delete_student():
     record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
-def get_user_original_password(user_id):
+def get_user_original_old_info(user_id):
     global conn, cursor
     sql = "select * from setudent_info where id=%d" % user_id
     cursor.execute(sql)
     conn.commit()
     row = cursor.fetchone()
     #return user_name and password#
-    return list(row)[1], list(row)[2]
+    return list(row)[1], list(row)[2], int(list(row)[13])+1
 
     
 def update_student_personal_info(up_id, target_column, up_data):
@@ -334,17 +334,28 @@ def update_student_personal_info(up_id, target_column, up_data):
     global stu_index, stu_sys_info, conn, cursor
     #must match old password then update datas#
     confirm_pwd = raw_input('please input user password to check:')
-    up_name, old_password = get_user_original_password(up_id)
-    if confirm_pwd != :
+    up_name, old_password, up_change_time = get_user_original_old_info(up_id)
+    if confirm_pwd != old_password:
         ret_msg = 'old password checked wrong! update user=[%s] data failure!' % up_name
         print ret_msg
         record_operation_or_security_log('admin', ret_msg, 'failure', 'opt_log')
+        return
     up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if 'salary' == target_column:
         up_data = int(up_data)
-
-    sql = ""
-    # TO DO#
+        sql = "update student_info set %s='%d',update_time='%s',change_times=%d where id=%d", % (target_column, up_data, up_change_time, up_id)
+    else:
+        sql = "update student_info set %s='%s',update_time='%s',change_times=%d where id=%d", % (target_column, up_data, up_change_time, up_id)
+    cursor.execute(sql)
+    conn.commit()
+    # if address or salary change then update lover's#
+    if 'whose_lover' == target_column and ('address' == target_column or 'salary' == target_column):
+    # up_lover or original lover#        
+        have_lovers_exits_then_merge(up_name, up_data, up_time)
+    # time.sleep(1)
+    ret_msg = 'update user=[%s] succeed' % up_name
+    print ret_msg
+    record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
 
 
 def nn_update_student():
@@ -365,23 +376,6 @@ def nn_update_student():
         #up_dic {'salary': '10000', 'password': 'xxx', 'address': 'xian'}
         for target_column, up_data in up_dic.items():
             update_student_personl_info(update_id, target_column, up_data)
-
-        #need TODO#
-        # if address or salary change then update lover's#
-        if up_address is not '' or up_salary is not '':
-        # up_lover or original lover#
-            have_lovers_exits_then_merge(update_user, up_lover, create_time)
-        sql = "update student_info set data_status=0 where id=%s" % update_id
-        cursor.execute(sql)
-        conn.commit()
-        ret_msg = 'update user=[%s] succeed.' % update_user
-        result = 'succeed'
-        print ret_msg
-        ret_msg = 'update user fail, user_name=[%s] is not in system.' % update_user
-        result = 'failure'
-        print ret_msg
-        # time.sleep(1)
-        record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
 
 def according_to_query_type_display(q_type, little=0, larger=0):
@@ -524,6 +518,11 @@ def nn_display_student():
                         print '   ***    ' + match
 
 
+def login_personal_info_features():
+    #TODO#
+    pass
+                                                
+                        
 def start_manager_system():
     """
     start student manager system
@@ -559,7 +558,7 @@ def start_manager_system():
                     print 'to be or not to be'
         else:
             # login in personal info system#
-            # TODO#
+            login_personal_info_features()
             return
 
 
