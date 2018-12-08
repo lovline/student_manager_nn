@@ -594,14 +594,14 @@ def login_personal_info_features():
         ret_msg = 'the user=[%s] is not exits, please add first.' % u_name
         print ret_msg
         record_operation_or_security_log(u_name, ret_msg, 'failure', 'sec_log')
-        return
+        return False
     list_row = get_user_original_old_info(id)
     old_pwd = list_row[2]
     if old_pwd is not u_pwd:
         ret_msg = 'old password checked wrong! login user=[%s] failure!' % u_name
         print ret_msg
         record_operation_or_security_log(u_name, ret_msg, 'failure', 'sec_log')
-        return
+        return False
     ret_msg = 'correct password checked' % u_name
     print ret_msg
     record_operation_or_security_log(u_name, ret_msg, 'succeed', 'sec_log')
@@ -611,21 +611,25 @@ def login_personal_info_features():
     conn.commit()
     personal_info = list(cursor.fetchone())
     print personal_info[0:2] + personal_info[2:14]
-    transfer_info = raw_input('please give a name to transfer and money like Tony:1000 ')
-    transfer_name, transfer_money = transfer_info.split(':')
-    if have_record_data(transfer_name) is False:
-        ret_msg = 'user=[%s] is not exits in system' % transfer_name
+    return u_name
+
+
+def taobao_shopping_feature(u_name):
+    global conn, cursor
+    shop_stuff = ['books', 'computer', 'snacks']
+    cost = 5700
+    u_id = have_record_data(u_name)
+    row_list = get_user_original_old_info(u_id)
+    u_deposit = int(row_list[9])
+    if u_deposit < cost:
+        ret_msg = 'you dont have enough money to buy these thins, it costs [%d] and you have [%d]' % (cost, u_deposit)
         print ret_msg
-        record_operation_or_security_log(u_name, ret_msg, 'failure', 'opt_log')
         return
-    #transfer to other people#
-    transfer_flag = personal_transfer_to_someone(u_name, transfer_name, int(transfer_money))
-    if transfer_flag and transfer_name is not u_name:
-        update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        have_lover_exits_then_merge(u_name, transfer_name, update_time)
-    #leave a message to lovers#
-    whisper_info = raw_input('please leave a messag to your lover ')
-    leave_messages_to_lover(u_name, whisper_info)
+    ret_msg = 'user=[%s] bought stuff [%s] cost=[%d] and now deposit is [%d]' % (u_name, shop_stuff, cost, u_deposit)
+    #TODO#
+    sql = "update record_history set () valuse()"
+    cursor.execute(sql)
+    conn.commit()
 
 
 def start_manager_system():
@@ -662,8 +666,25 @@ def start_manager_system():
                     print 'to be or not to be'
         else:
             # login in personal info system#
-            login_personal_info_features()
-            return
+            u_name = login_personal_info_features()
+            if u_name is not False:
+                transfer_info = raw_input('please give a name to transfer and money like Tony:1000 ')
+                transfer_name, transfer_money = transfer_info.split(':')
+                if have_record_data(transfer_name) is False:
+                    ret_msg = 'user=[%s] is not exits in system' % transfer_name
+                    print ret_msg
+                    record_operation_or_security_log(u_name, ret_msg, 'failure', 'opt_log')
+                    return
+                # transfer to other people#
+                transfer_flag = personal_transfer_to_someone(u_name, transfer_name, int(transfer_money))
+                if transfer_flag and transfer_name is not u_name:
+                    update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    have_lover_exits_then_merge(u_name, transfer_name, update_time)
+                # leave a message to lovers#
+                whisper_info = raw_input('please leave a messag to your lover ')
+                leave_messages_to_lover(u_name, whisper_info)
+                # shooping features#
+                taobao_shopping_feature(u_name)
 
 
 def clear_system():
@@ -736,6 +757,4 @@ def student_manger_system():
 
 # gonna begin#
 student_manger_system()
-
-
 
