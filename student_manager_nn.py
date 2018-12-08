@@ -126,17 +126,22 @@ def have_record_data(username):
     else:
         return False
 
-    
+
 def get_user_original_old_info(user_id):
+    """
+    throught user_id query the list result row
+    :param user_id:
+    :return:
+    """
     global conn, cursor
     sql = "select * from setudent_info where id=%d" % user_id
     cursor.execute(sql)
     conn.commit()
     row = cursor.fetchone()
-    #return user_name and password#
-    return list(row)[1], list(row)[2], int(list(row)[13])+1
-    
-    
+    # return user_name, password, salary and change times#
+    return list(row)
+
+
 def query_current_data_from_db():
     """
     query and record current valid datas from DB
@@ -157,7 +162,7 @@ def query_current_data_from_db():
     return stu_index, stu_sys_info
 
 
-def have_lovers_exits_then_merge(latest_user, lover_name, update_time):
+def have_lover_exits_then_merge(cur_user, lover_name, update_time):
     """
     merge address and salary of two - latest_user's lovers and itself
     :param latest_user:
@@ -167,21 +172,28 @@ def have_lovers_exits_then_merge(latest_user, lover_name, update_time):
     """
     global stu_index, stu_sys_info, conn, cursor
     merge_address, merge_salary = '', 0
-    cur_uid = have_record_data(latest_user)
+    cur_uid = have_record_data(cur_user)
     lover_uid = have_record_data(lover_name)
     if lover_uid is not False:
+        #get total address and salary#
         sql = "select * from student_info where id=%d or id=%d" % (lover_uid, cur_uid)
         cursor.execute(sql)
         conn.commit()
         for row in cursor.fetchall():
             merge_address += (list(row)[6] + ' ')
             merge_salary += int(list(row)[9])
+        #update total address, salary and change times#
+        sql = "select * from student_info where id=%d or id=%d" % (lover_uid, cur_uid)
+        cursor.execute(sql)
+        conn.commit()
+        for row in cursor.fetchall():
+            #get individual change time#
             change_t = int(list(row)[13]) + 1
-            sql_new = "update student_info set address='%s', salary=%d, update_time='%s', change_times=%d where id=%d" \
+            sql_new = "update student_info set address='%s',salary=%d,update_time='%s',change_times=%d where id=%d" \
                       % (merge_address, merge_salary, update_time, change_t, list(row)[0])
             cursor.execute(sql_new)
             conn.commit()
-        ret_msg = 'update user=[%s] and user=[%s] succeed.' % (lover_name, latest_user)
+        ret_msg = 'update user=[%s] and user=[%s] succeed.' % (lover_name, cur_user)
         print ret_msg
         record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
 
@@ -265,12 +277,12 @@ def nn_add_student():
         conn.commit()
         # each commit needs to get latest DB data#
         stu_index, stu_sys_info = query_current_data_from_db()
-        ret_msg = 'add student info succeed.\n'
+        ret_msg = 'admin adds a new student info succeed.\n'
         print ret_msg
         record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
         # if lovers exits in DB the merge them address and salary#
         if whose_lover is not 'NA':
-            have_lovers_exits_then_merge(user_name, whose_lover, create_time)
+            have_lover_exits_then_merge(user_name, whose_lover, create_time)
         return
 
 
@@ -307,11 +319,12 @@ def nn_delete_student():
     del_user = raw_input('please choose one user you want to delete by user_name: ')
     del_id = have_record_data(del_user)
     if del_id:
-        # TO DO  need:times changeTimes++#
-        sql = "update student_info set data_status=0 where id=%s" % del_id
+        list_row = get_user_original_old_info(del_id)
+        change_times = int(list_row[13]) + 1
+        sql = "update student_info set change_times='%s',data_status=0 where id=%s" % (change_times, del_id)
         cursor.execute(sql)
         conn.commit()
-        ret_msg = 'delete user=[%s] succeed.' % del_user
+        ret_msg = 'admin delete user=[%s] succeed.' % del_user
         result = 'succeed'
         print ret_msg
     else:
@@ -321,7 +334,7 @@ def nn_delete_student():
     # time.sleep(1)
     record_operation_or_security_log('admin', ret_msg, result, 'opt_log')
 
-    
+
 def update_student_personal_info(up_id, target_column, up_data):
     """
     user up_data to update personal information by his or her column
@@ -331,9 +344,10 @@ def update_student_personal_info(up_id, target_column, up_data):
     :return:
     """
     global stu_index, stu_sys_info, conn, cursor
-    #must match old password then update datas#
+    # must match old password then update datas#
     confirm_pwd = raw_input('please input user password to check:')
-    up_name, old_password, up_change_time = get_user_original_old_info(up_id)
+    list_row = get_user_original_old_info(up_id)
+    up_name, old_password, old_salary, up_change_time = list_row[1], list_row[2], int(list_row[9]), int(list_row[13]) + 1
     if confirm_pwd != old_password:
         ret_msg = 'old password checked wrong! update user=[%s] data failure!' % up_name
         print ret_msg
@@ -341,18 +355,19 @@ def update_student_personal_info(up_id, target_column, up_data):
         return
     up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if 'salary' == target_column:
-        up_data = int(up_data)
-        sql = "update student_info set %s='%d',update_time='%s',change_times=%d where id=%d", % (target_column, up_data, up_change_time, up_id)
+        sql = "update student_info set '%s'=%d,update_time='%s',change_times=%d where id=%d" \
+                % (target_column, int(up_data), up_time, up_change_time, up_id)
     else:
-        sql = "update student_info set %s='%s',update_time='%s',change_times=%d where id=%d", % (target_column, up_data, up_change_time, up_id)
+        sql = "update student_info set '%s'='%s',update_time='%s',change_times=%d where id=%d" \
+                % (target_column, up_data, up_time, up_change_time, up_id)
     cursor.execute(sql)
     conn.commit()
     # if address or salary change then update lover's#
-    if 'whose_lover' == target_column and ('address' == target_column or 'salary' == target_column):
-    # up_lover or original lover#        
-        have_lovers_exits_then_merge(up_name, up_data, up_time)
+    if 'whose_lover' == target_column:
+        # up_lover or original lover#
+        have_lover_exits_then_merge(up_name, up_data, up_time)
     # time.sleep(1)
-    ret_msg = 'update user=[%s] succeed' % up_name
+    ret_msg = 'admin update user=[%s] succeed' % up_name
     print ret_msg
     record_operation_or_security_log('admin', ret_msg, 'succeed', 'opt_log')
 
@@ -366,15 +381,15 @@ def nn_update_student():
         variables = raw_input('which attributes you want to update from [password or single or address or '
                               'graduate_school or company or salary or whose_lover]? input like this [address:xian]')
         variables_info = variables.split(' ')
-        #variables_info looks like ['password:xxx', 'address:xian']#
+        # variables_info looks like ['salary:10000', 'address:xian']#
         up_dic = {}
         for up_data in variables_info:
-            #sep_data looks like this ['password', 'xxx']#
+            # sep_data looks like this ['address', 'xian']#
             sep_data = re.split(':', up_data)
             up_dic[sep_data[0]] = sep_data[1]
-        #up_dic {'salary': '10000', 'password': 'xxx', 'address': 'xian'}
+        # up_dic {'salary': '10000', 'address': 'xian'}
         for target_column, up_data in up_dic.items():
-            update_student_personl_info(update_id, target_column, up_data)
+            update_student_personal_info(update_id, target_column, up_data)
 
 
 def according_to_query_type_display(q_type, little=0, larger=0):
@@ -517,8 +532,61 @@ def nn_display_student():
                         print '   ***    ' + match
 
 
+def personal_transfer_to_someone(cur_uname, transfer_name, transfer_money):
+    """
+    transfer money to someone
+    :param cur_name:
+    :param transfer_name:
+    :param transfer_money:
+    :return:
+    """
+    global conn, cursor, stu_index, stu_sys_info
+    #get current user's deposit#
+    cur_uid = have_record_data(cur_uname)
+    list_row = get_user_original_old_info(cur_uid)
+    cur_user_deposit = int(list_row[9])
+    if transfer_money > cur_user_deposit:
+        ret_msg = 'your deposit is insufficient. please recharge first'
+        print ret_msg
+        record_operation_or_security_log('user', ret_msg, 'failure', 'opt_log')
+        return False
+    up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    transfer_uid = have_record_data(transfer_name)
+    list_row = get_user_original_old_info(transfer_uid)
+    transfer_deposit = int(list_row[9])
+    cur_user_deposit -= transfer_money
+    transfer_deposit += transfer_money
+    dic_tmp = dict(zip([cur_uid, transfer_uid], [cur_user_deposit, transfer_deposit]))
+    for id, deposit in dic_tmp.items():
+        list_row = get_user_original_old_info(id)
+        change_time = int(list_row[13]) + 1
+        sql = "update student_info set salary=%d,update_time='%s',change_times='%s where id=%d" \
+                % (int(deposit), up_time, change_time, id)
+        cursor.execute(sql)
+        conn.commit()
+    ret_msg = 'user=[%s] transfered money=[%d] to user=[%s] succeed.' % (cur_uname, transfer_money, transfer_name)
+    print ret_msg
+    record_operation_or_security_log(cur_uname, ret_msg, 'succeed', 'opt_log')
+    return True
+
+
+def leave_messages_to_lover(u_name, whisper_info):
+    global conn, cursor
+    u_id = have_record_data(u_name)
+    row_list_user = get_user_original_old_info(u_id)
+    lover_name = row_list_user[10]
+    lover_id = have_record_data(lover_name)
+    up_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #TODO#
+    sql = "insert into student_info () values() where id=%d" % (lover_id)
+    cursor.execute(sql)
+    conn.commit()
+    ret_msg = 'user=[%s] leaves a message to user=[%s].' %(u_name, lover_name)
+    print ret_msg
+
+
 def login_personal_info_features():
-    global conn, cursor 
+    global conn, cursor
     per_info = raw_input('please personal user_name and password : ')
     u_name, u_pwd = per_info.split('\s+')
     u_id = have_record_data(u_name)
@@ -527,8 +595,9 @@ def login_personal_info_features():
         print ret_msg
         record_operation_or_security_log(u_name, ret_msg, 'failure', 'sec_log')
         return
-    old_pwd = get_user_original_old_info(u_id)[1]
-    if old_pwd != u_pwd:
+    list_row = get_user_original_old_info(id)
+    old_pwd = list_row[2]
+    if old_pwd is not u_pwd:
         ret_msg = 'old password checked wrong! login user=[%s] failure!' % u_name
         print ret_msg
         record_operation_or_security_log(u_name, ret_msg, 'failure', 'sec_log')
@@ -536,15 +605,29 @@ def login_personal_info_features():
     ret_msg = 'correct password checked' % u_name
     print ret_msg
     record_operation_or_security_log(u_name, ret_msg, 'succeed', 'sec_log')
-    ret_msg = 'Hello [%s], welcome to your personal manager system!' % u_name
+    print 'Hello [%s], welcome to your personal manager system!' % u_name
     sql = "select * from student_info where id=%d" % u_id
     cursor.execute(sql)
     conn.commit()
     personal_info = list(cursor.fetchone())
-    print personal_info[1:2] + personal_info[2:14]
-    #TODO#
-                                                
-                        
+    print personal_info[0:2] + personal_info[2:14]
+    transfer_info = raw_input('please give a name to transfer and money like Tony:1000 ')
+    transfer_name, transfer_money = transfer_info.split(':')
+    if have_record_data(transfer_name) is False:
+        ret_msg = 'user=[%s] is not exits in system' % transfer_name
+        print ret_msg
+        record_operation_or_security_log(u_name, ret_msg, 'failure', 'opt_log')
+        return
+    #transfer to other people#
+    transfer_flag = personal_transfer_to_someone(u_name, transfer_name, int(transfer_money))
+    if transfer_flag and transfer_name is not u_name:
+        update_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        have_lover_exits_then_merge(u_name, transfer_name, update_time)
+    #leave a message to lovers#
+    whisper_info = raw_input('please leave a messag to your lover ')
+    leave_messages_to_lover(u_name, whisper_info)
+
+
 def start_manager_system():
     """
     start student manager system
@@ -559,8 +642,7 @@ def start_manager_system():
                             ' (1) add one new student to the system\n' \
                             ' (2) delete one student info from system\n' \
                             ' (3) update one student record into system\n' \
-                            ' (4) show existence students through system\n' \
-                            ' (5) new feature to do...'
+                            ' (4) show existence students through system\n'
             print welcome_title
             choice = raw_input('please input valid number between [1-5] or q/Q to quit: ')
             if 'q' == choice or 'Q' == choice:
